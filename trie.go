@@ -8,7 +8,7 @@ import (
 	rnet "github.com/joshua-tianci/cidranger/net"
 )
 
-// prefixTrie is a path-compressed (PC) trie implementation of the
+// PrefixTrie is a path-compressed (PC) trie implementation of the
 // ranger interface inspired by this blog post:
 // https://vincent.bernat.im/en/blog/2017-ipv4-route-lookup-linux
 //
@@ -33,17 +33,14 @@ import (
 // prefix trie, use versionedRanger wrapper instead.
 //
 // TODO: Implement level-compressed component of the LPC trie.
-type prefixTrie struct {
-	parent   *prefixTrie
-	children [2]*prefixTrie
-
-	numBitsSkipped uint
-	numBitsHandled uint
-
-	network rnet.Network
-	entry   RangerEntry
-
-	size int // This is only maintained in the root trie.
+type PrefixTrie struct {
+	Children    [2]*PrefixTrie `json:"children"`
+	Parent      *PrefixTrie    `json:"parent"`
+	Entry       RangerEntry    `json:"entry"`
+	Network     rnet.Network   `json:"network"`
+	Size        int            `json:"size,omitempty"` // This is only maintained in the root trie.
+	BitsSkipped uint           `json:"bits_skipped"`
+	BitsHandled uint           `json:"bits_handled"`
 }
 
 var ip4ZeroCIDR, ip6ZeroCIDR net.IPNet
@@ -60,57 +57,57 @@ func newRanger(version rnet.IPVersion) Ranger {
 }
 
 // newPrefixTree creates a new prefixTrie.
-func newPrefixTree(version rnet.IPVersion) *prefixTrie {
+func newPrefixTree(version rnet.IPVersion) *PrefixTrie {
 	rootNet := ip4ZeroCIDR
 	if version == rnet.IPv6 {
 		rootNet = ip6ZeroCIDR
 	}
-	return &prefixTrie{
-		numBitsSkipped: 0,
-		numBitsHandled: 1,
-		network:        rnet.NewNetwork(rootNet),
+	return &PrefixTrie{
+		BitsSkipped: 0,
+		BitsHandled: 1,
+		Network:     rnet.NewNetwork(rootNet),
 	}
 }
 
-func newPathprefixTrie(network rnet.Network, numBitsSkipped uint) *prefixTrie {
+func newPathprefixTrie(network rnet.Network, numBitsSkipped uint) *PrefixTrie {
 	version := rnet.IPv4
 	if len(network.Number) == rnet.IPv6Uint32Count {
 		version = rnet.IPv6
 	}
 	path := newPrefixTree(version)
-	path.numBitsSkipped = numBitsSkipped
-	path.network = network.Masked(int(numBitsSkipped))
+	path.BitsSkipped = numBitsSkipped
+	path.Network = network.Masked(int(numBitsSkipped))
 	return path
 }
 
-func newEntryTrie(network rnet.Network, entry RangerEntry) *prefixTrie {
+func newEntryTrie(network rnet.Network, entry RangerEntry) *PrefixTrie {
 	leaf := newPathprefixTrie(network, uint(network.Mask))
-	leaf.entry = entry
+	leaf.Entry = entry
 	return leaf
 }
 
 // Insert inserts a RangerEntry into prefix trie.
-func (p *prefixTrie) Insert(entry RangerEntry) error {
+func (p *PrefixTrie) Insert(entry RangerEntry) error {
 	network := entry.Network()
 	sizeIncreased, err := p.insert(rnet.NewNetwork(network), entry)
 	if sizeIncreased {
-		p.size++
+		p.Size++
 	}
 	return err
 }
 
 // Remove removes RangerEntry identified by given network from trie.
-func (p *prefixTrie) Remove(network net.IPNet) (RangerEntry, error) {
+func (p *PrefixTrie) Remove(network net.IPNet) (RangerEntry, error) {
 	entry, err := p.remove(rnet.NewNetwork(network))
 	if entry != nil {
-		p.size--
+		p.Size--
 	}
 	return entry, err
 }
 
 // Contains returns boolean indicating whether given ip is contained in any
 // of the inserted networks.
-func (p *prefixTrie) Contains(ip net.IP) (bool, error) {
+func (p *PrefixTrie) Contains(ip net.IP) (bool, error) {
 	nn := rnet.NewNetworkNumber(ip)
 	if nn == nil {
 		return false, ErrInvalidNetworkNumberInput
@@ -120,7 +117,7 @@ func (p *prefixTrie) Contains(ip net.IP) (bool, error) {
 
 // ContainingNetworks returns the list of RangerEntry(s) the given ip is
 // contained in in ascending prefix order.
-func (p *prefixTrie) ContainingNetworks(ip net.IP) ([]RangerEntry, error) {
+func (p *PrefixTrie) ContainingNetworks(ip net.IP) ([]RangerEntry, error) {
 	nn := rnet.NewNetworkNumber(ip)
 	if nn == nil {
 		return nil, ErrInvalidNetworkNumberInput
@@ -131,34 +128,33 @@ func (p *prefixTrie) ContainingNetworks(ip net.IP) ([]RangerEntry, error) {
 // CoveredNetworks returns the list of RangerEntry(s) the given ipnet
 // covers.  That is, the networks that are completely subsumed by the
 // specified network.
-func (p *prefixTrie) CoveredNetworks(network net.IPNet) ([]RangerEntry, error) {
-	net := rnet.NewNetwork(network)
-	return p.coveredNetworks(net)
+func (p *PrefixTrie) CoveredNetworks(network net.IPNet) ([]RangerEntry, error) {
+	return p.coveredNetworks(rnet.NewNetwork(network))
 }
 
 // Len returns number of networks in ranger.
-func (p *prefixTrie) Len() int {
-	return p.size
+func (p *PrefixTrie) Len() int {
+	return p.Size
 }
 
 // String returns string representation of trie, mainly for visualization and
 // debugging.
-func (p *prefixTrie) String() string {
+func (p *PrefixTrie) String() string {
 	children := []string{}
 	padding := strings.Repeat("| ", p.level()+1)
-	for bits, child := range p.children {
+	for bits, child := range p.Children {
 		if child == nil {
 			continue
 		}
 		childStr := fmt.Sprintf("\n%s%d--> %s", padding, bits, child.String())
 		children = append(children, childStr)
 	}
-	return fmt.Sprintf("%s (target_pos:%d:has_entry:%t)%s", p.network,
+	return fmt.Sprintf("%s (target_pos:%d:has_entry:%t)%s", p.Network,
 		p.targetBitPosition(), p.hasEntry(), strings.Join(children, ""))
 }
 
-func (p *prefixTrie) contains(number rnet.NetworkNumber) (bool, error) {
-	if !p.network.Contains(number) {
+func (p *PrefixTrie) contains(number rnet.NetworkNumber) (bool, error) {
+	if !p.Network.Contains(number) {
 		return false, nil
 	}
 	if p.hasEntry() {
@@ -171,20 +167,20 @@ func (p *prefixTrie) contains(number rnet.NetworkNumber) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	child := p.children[bit]
+	child := p.Children[bit]
 	if child != nil {
 		return child.contains(number)
 	}
 	return false, nil
 }
 
-func (p *prefixTrie) containingNetworks(number rnet.NetworkNumber) ([]RangerEntry, error) {
+func (p *PrefixTrie) containingNetworks(number rnet.NetworkNumber) ([]RangerEntry, error) {
 	results := []RangerEntry{}
-	if !p.network.Contains(number) {
+	if !p.Network.Contains(number) {
 		return results, nil
 	}
 	if p.hasEntry() {
-		results = []RangerEntry{p.entry}
+		results = []RangerEntry{p.Entry}
 	}
 	if p.targetBitPosition() < 0 {
 		return results, nil
@@ -193,7 +189,7 @@ func (p *prefixTrie) containingNetworks(number rnet.NetworkNumber) ([]RangerEntr
 	if err != nil {
 		return nil, err
 	}
-	child := p.children[bit]
+	child := p.Children[bit]
 	if child != nil {
 		ranges, err := child.containingNetworks(number)
 		if err != nil {
@@ -210,9 +206,9 @@ func (p *prefixTrie) containingNetworks(number rnet.NetworkNumber) ([]RangerEntr
 	return results, nil
 }
 
-func (p *prefixTrie) coveredNetworks(network rnet.Network) ([]RangerEntry, error) {
+func (p *PrefixTrie) coveredNetworks(network rnet.Network) ([]RangerEntry, error) {
 	var results []RangerEntry
-	if network.Covers(p.network) {
+	if network.Covers(p.Network) {
 		for entry := range p.walkDepth() {
 			results = append(results, entry)
 		}
@@ -221,7 +217,7 @@ func (p *prefixTrie) coveredNetworks(network rnet.Network) ([]RangerEntry, error
 		if err != nil {
 			return results, err
 		}
-		child := p.children[bit]
+		child := p.Children[bit]
 		if child != nil {
 			return child.coveredNetworks(network)
 		}
@@ -229,10 +225,10 @@ func (p *prefixTrie) coveredNetworks(network rnet.Network) ([]RangerEntry, error
 	return results, nil
 }
 
-func (p *prefixTrie) insert(network rnet.Network, entry RangerEntry) (bool, error) {
-	if p.network.Equal(network) {
-		sizeIncreased := p.entry == nil
-		p.entry = entry
+func (p *PrefixTrie) insert(network rnet.Network, entry RangerEntry) (bool, error) {
+	if p.Network.Equal(network) {
+		sizeIncreased := p.Entry == nil
+		p.Entry = entry
 		return sizeIncreased, nil
 	}
 
@@ -240,7 +236,7 @@ func (p *prefixTrie) insert(network rnet.Network, entry RangerEntry) (bool, erro
 	if err != nil {
 		return false, err
 	}
-	existingChild := p.children[bit]
+	existingChild := p.Children[bit]
 
 	// No existing child, insert new leaf trie.
 	if existingChild == nil {
@@ -250,7 +246,7 @@ func (p *prefixTrie) insert(network rnet.Network, entry RangerEntry) (bool, erro
 
 	// Check whether it is necessary to insert additional path prefix between current trie and existing child,
 	// in the case that inserted network diverges on its path to existing child.
-	lcb, err := network.LeastCommonBitPosition(existingChild.network)
+	lcb, err := network.LeastCommonBitPosition(existingChild.Network)
 	if err != nil {
 		return false, err
 	}
@@ -268,30 +264,30 @@ func (p *prefixTrie) insert(network rnet.Network, entry RangerEntry) (bool, erro
 	return existingChild.insert(network, entry)
 }
 
-func (p *prefixTrie) appendTrie(bit uint32, prefix *prefixTrie) {
-	p.children[bit] = prefix
-	prefix.parent = p
+func (p *PrefixTrie) appendTrie(bit uint32, prefix *PrefixTrie) {
+	p.Children[bit] = prefix
+	prefix.Parent = p
 }
 
-func (p *prefixTrie) insertPrefix(bit uint32, pathPrefix, child *prefixTrie) error {
+func (p *PrefixTrie) insertPrefix(bit uint32, pathPrefix, child *PrefixTrie) error {
 	// Set parent/child relationship between current trie and inserted pathPrefix
-	p.children[bit] = pathPrefix
-	pathPrefix.parent = p
+	p.Children[bit] = pathPrefix
+	pathPrefix.Parent = p
 
 	// Set parent/child relationship between inserted pathPrefix and original child
-	pathPrefixBit, err := pathPrefix.targetBitFromIP(child.network.Number)
+	pathPrefixBit, err := pathPrefix.targetBitFromIP(child.Network.Number)
 	if err != nil {
 		return err
 	}
-	pathPrefix.children[pathPrefixBit] = child
-	child.parent = pathPrefix
+	pathPrefix.Children[pathPrefixBit] = child
+	child.Parent = pathPrefix
 	return nil
 }
 
-func (p *prefixTrie) remove(network rnet.Network) (RangerEntry, error) {
-	if p.hasEntry() && p.network.Equal(network) {
-		entry := p.entry
-		p.entry = nil
+func (p *PrefixTrie) remove(network rnet.Network) (RangerEntry, error) {
+	if p.hasEntry() && p.Network.Equal(network) {
+		entry := p.Entry
+		p.Entry = nil
 
 		err := p.compressPathIfPossible()
 		if err != nil {
@@ -303,54 +299,58 @@ func (p *prefixTrie) remove(network rnet.Network) (RangerEntry, error) {
 	if err != nil {
 		return nil, err
 	}
-	child := p.children[bit]
+	child := p.Children[bit]
 	if child != nil {
 		return child.remove(network)
 	}
 	return nil, nil
 }
 
-func (p *prefixTrie) qualifiesForPathCompression() bool {
+func (p *PrefixTrie) qualifiesForPathCompression() bool {
 	// Current prefix trie can be path compressed if it meets all following.
 	//		1. records no CIDR entry
 	//		2. has single or no child
 	//		3. is not root trie
-	return !p.hasEntry() && p.childrenCount() <= 1 && p.parent != nil
+	return !p.hasEntry() && p.childrenCount() <= 1 && p.Parent != nil
 }
 
-func (p *prefixTrie) compressPathIfPossible() error {
+func (p *PrefixTrie) compressPathIfPossible() error {
 	if !p.qualifiesForPathCompression() {
 		// Does not qualify to be compressed
 		return nil
 	}
 
 	// Find lone child.
-	var loneChild *prefixTrie
-	for _, child := range p.children {
+	var loneChild *PrefixTrie
+	for _, child := range p.Children {
 		if child != nil {
 			loneChild = child
 			break
 		}
 	}
 
-	// Find root of currnt single child lineage.
-	parent := p.parent
-	for ; parent.qualifiesForPathCompression(); parent = parent.parent {
+	// Find root of current single child lineage.
+	current := p.Parent
+	for {
+		if !current.qualifiesForPathCompression() {
+			break
+		}
+		current = current.Parent
 	}
-	parentBit, err := parent.targetBitFromIP(p.network.Number)
+	parentBit, err := current.targetBitFromIP(p.Network.Number)
 	if err != nil {
 		return err
 	}
-	parent.children[parentBit] = loneChild
+	current.Children[parentBit] = loneChild
 
-	// Attempts to furthur apply path compression at current lineage parent, in case current lineage
+	// Attempts to further apply path compression at current lineage parent, in case current lineage
 	// compressed into parent.
-	return parent.compressPathIfPossible()
+	return current.compressPathIfPossible()
 }
 
-func (p *prefixTrie) childrenCount() int {
+func (p *PrefixTrie) childrenCount() int {
 	count := 0
-	for _, child := range p.children {
+	for _, child := range p.Children {
 		if child != nil {
 			count++
 		}
@@ -358,40 +358,40 @@ func (p *prefixTrie) childrenCount() int {
 	return count
 }
 
-func (p *prefixTrie) totalNumberOfBits() uint {
-	return rnet.BitsPerUint32 * uint(len(p.network.Number))
+func (p *PrefixTrie) totalNumberOfBits() uint {
+	return rnet.BitsPerUint32 * uint(len(p.Network.Number))
 }
 
-func (p *prefixTrie) targetBitPosition() int {
-	return int(p.totalNumberOfBits()-p.numBitsSkipped) - 1
+func (p *PrefixTrie) targetBitPosition() int {
+	return int(p.totalNumberOfBits()-p.BitsSkipped) - 1
 }
 
-func (p *prefixTrie) targetBitFromIP(n rnet.NetworkNumber) (uint32, error) {
+func (p *PrefixTrie) targetBitFromIP(n rnet.NetworkNumber) (uint32, error) {
 	// This is a safe uint boxing of int since we should never attempt to get
 	// target bit at a negative position.
 	return n.Bit(uint(p.targetBitPosition()))
 }
 
-func (p *prefixTrie) hasEntry() bool {
-	return p.entry != nil
+func (p *PrefixTrie) hasEntry() bool {
+	return p.Entry != nil
 }
 
-func (p *prefixTrie) level() int {
-	if p.parent == nil {
+func (p *PrefixTrie) level() int {
+	if p.Parent == nil {
 		return 0
 	}
-	return p.parent.level() + 1
+	return p.Parent.level() + 1
 }
 
 // walkDepth walks the trie in depth order, for unit testing.
-func (p *prefixTrie) walkDepth() <-chan RangerEntry {
+func (p *PrefixTrie) walkDepth() <-chan RangerEntry {
 	entries := make(chan RangerEntry)
 	go func() {
 		if p.hasEntry() {
-			entries <- p.entry
+			entries <- p.Entry
 		}
 		childEntriesList := []<-chan RangerEntry{}
-		for _, trie := range p.children {
+		for _, trie := range p.Children {
 			if trie == nil {
 				continue
 			}

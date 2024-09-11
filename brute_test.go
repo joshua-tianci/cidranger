@@ -9,6 +9,7 @@ import (
 )
 
 func TestInsert(t *testing.T) {
+	t.Parallel()
 	ranger := newBruteRanger().(*bruteRanger)
 	_, networkIPv4, _ := net.ParseCIDR("0.0.1.0/24")
 	_, networkIPv6, _ := net.ParseCIDR("8000::/96")
@@ -25,6 +26,7 @@ func TestInsert(t *testing.T) {
 }
 
 func TestInsertError(t *testing.T) {
+	t.Parallel()
 	bRanger := newBruteRanger().(*bruteRanger)
 	_, networkIPv4, _ := net.ParseCIDR("0.0.1.0/24")
 	networkIPv4.IP = append(networkIPv4.IP, byte(4))
@@ -33,6 +35,7 @@ func TestInsertError(t *testing.T) {
 }
 
 func TestRemove(t *testing.T) {
+	t.Parallel()
 	ranger := newBruteRanger().(*bruteRanger)
 	_, networkIPv4, _ := net.ParseCIDR("0.0.1.0/24")
 	_, networkIPv6, _ := net.ParseCIDR("8000::/96")
@@ -60,6 +63,7 @@ func TestRemove(t *testing.T) {
 }
 
 func TestRemoveError(t *testing.T) {
+	t.Parallel()
 	r := newBruteRanger().(*bruteRanger)
 	_, invalidNetwork, _ := net.ParseCIDR("0.0.1.0/24")
 	invalidNetwork.IP = append(invalidNetwork.IP, byte(4))
@@ -69,6 +73,7 @@ func TestRemoveError(t *testing.T) {
 }
 
 func TestContains(t *testing.T) {
+	t.Parallel()
 	r := newBruteRanger().(*bruteRanger)
 	_, network, _ := net.ParseCIDR("0.0.1.0/24")
 	_, network1, _ := net.ParseCIDR("8000::/112")
@@ -90,6 +95,7 @@ func TestContains(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			contains, err := r.Contains(tc.ip)
 			if tc.err != nil {
 				assert.Equal(t, tc.err, err)
@@ -102,6 +108,7 @@ func TestContains(t *testing.T) {
 }
 
 func TestContainingNetworks(t *testing.T) {
+	t.Parallel()
 	r := newBruteRanger().(*bruteRanger)
 	_, network1, _ := net.ParseCIDR("0.0.1.0/24")
 	_, network2, _ := net.ParseCIDR("0.0.1.0/25")
@@ -132,6 +139,7 @@ func TestContainingNetworks(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			networks, err := r.ContainingNetworks(tc.ip)
 			if tc.err != nil {
 				assert.Equal(t, tc.err, err)
@@ -147,8 +155,10 @@ func TestContainingNetworks(t *testing.T) {
 }
 
 func TestCoveredNetworks(t *testing.T) {
+	t.Parallel()
 	for _, tc := range coveredNetworkTests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			ranger := newBruteRanger()
 			for _, insert := range tc.inserts {
 				_, network, _ := net.ParseCIDR(insert)

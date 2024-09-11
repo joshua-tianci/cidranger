@@ -22,6 +22,8 @@ func getAllByVersion(version rnet.IPVersion) *net.IPNet {
 }
 
 func TestPrefixTrieInsert(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		version                      rnet.IPVersion
 		inserts                      []string
@@ -74,6 +76,7 @@ func TestPrefixTrieInsert(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			trie := newPrefixTree(tc.version)
 			for _, insert := range tc.inserts {
 				_, network, _ := net.ParseCIDR(insert)
@@ -104,6 +107,8 @@ func TestPrefixTrieInsert(t *testing.T) {
 }
 
 func TestPrefixTrieString(t *testing.T) {
+	t.Parallel()
+
 	inserts := []string{"192.168.0.1/24", "192.168.1.1/24", "192.168.1.1/30"}
 	trie := newPrefixTree(rnet.IPv4)
 	for _, insert := range inserts {
@@ -119,6 +124,8 @@ func TestPrefixTrieString(t *testing.T) {
 }
 
 func TestPrefixTrieRemove(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		version                      rnet.IPVersion
 		inserts                      []string
@@ -196,6 +203,7 @@ func TestPrefixTrieRemove(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			trie := newPrefixTree(tc.version)
 			for _, insert := range tc.inserts {
 				_, network, _ := net.ParseCIDR(insert)
@@ -240,6 +248,8 @@ func TestPrefixTrieRemove(t *testing.T) {
 }
 
 func TestToReplicateIssue(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		version  rnet.IPVersion
 		inserts  []string
@@ -264,6 +274,7 @@ func TestToReplicateIssue(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			trie := newPrefixTree(tc.version)
 			for _, insert := range tc.inserts {
 				_, network, _ := net.ParseCIDR(insert)
@@ -291,6 +302,7 @@ type expectedIPRange struct {
 }
 
 func TestPrefixTrieContains(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		version     rnet.IPVersion
 		inserts     []string
@@ -318,6 +330,7 @@ func TestPrefixTrieContains(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			trie := newPrefixTree(tc.version)
 			for _, insert := range tc.inserts {
 				_, network, _ := net.ParseCIDR(insert)
@@ -347,6 +360,7 @@ func TestPrefixTrieContains(t *testing.T) {
 }
 
 func TestPrefixTrieContainingNetworks(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		version  rnet.IPVersion
 		inserts  []string
@@ -371,6 +385,7 @@ func TestPrefixTrieContainingNetworks(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			trie := newPrefixTree(tc.version)
 			for _, insert := range tc.inserts {
 				_, network, _ := net.ParseCIDR(insert)
@@ -462,8 +477,10 @@ var coveredNetworkTests = []coveredNetworkTest{
 }
 
 func TestPrefixTrieCoveredNetworks(t *testing.T) {
+	t.Parallel()
 	for _, tc := range coveredNetworkTests {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			trie := newPrefixTree(tc.version)
 			for _, insert := range tc.inserts {
 				_, network, _ := net.ParseCIDR(insert)
