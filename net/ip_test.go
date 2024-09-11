@@ -9,6 +9,8 @@ import (
 )
 
 func TestNewNetworkNumber(t *testing.T) {
+	t.Parallel()
+
 	cases := []struct {
 		ip   net.IP
 		nn   NetworkNumber
@@ -25,12 +27,14 @@ func TestNewNetworkNumber(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			assert.Equal(t, tc.nn, NewNetworkNumber(tc.ip))
 		})
 	}
 }
 
 func TestNetworkNumberAssertion(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		ip   NetworkNumber
 		to4  NetworkNumber
@@ -43,6 +47,7 @@ func TestNetworkNumberAssertion(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			assert.Equal(t, tc.to4, tc.ip.ToV4())
 			assert.Equal(t, tc.to6, tc.ip.ToV6())
 		})
@@ -50,6 +55,7 @@ func TestNetworkNumberAssertion(t *testing.T) {
 }
 
 func TestNetworkNumberBit(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		ip   NetworkNumber
 		ones map[uint]bool
@@ -62,6 +68,7 @@ func TestNetworkNumberBit(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			for i := uint(0); i < uint(len(tc.ip)*BitsPerUint32); i++ {
 				bit, err := tc.ip.Bit(i)
 				assert.NoError(t, err)
@@ -76,6 +83,7 @@ func TestNetworkNumberBit(t *testing.T) {
 }
 
 func TestNetworkNumberBitError(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		ip       NetworkNumber
 		position uint
@@ -91,6 +99,7 @@ func TestNetworkNumberBitError(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			_, err := tc.ip.Bit(tc.position)
 			assert.Equal(t, tc.err, err)
 		})
@@ -98,6 +107,7 @@ func TestNetworkNumberBitError(t *testing.T) {
 }
 
 func TestNetworkNumberEqual(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		n1     NetworkNumber
 		n2     NetworkNumber
@@ -112,12 +122,14 @@ func TestNetworkNumberEqual(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			assert.Equal(t, tc.equals, tc.n1.Equal(tc.n2))
 		})
 	}
 }
 
 func TestNetworkNumberNext(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		ip   string
 		next string
@@ -133,6 +145,7 @@ func TestNetworkNumberNext(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			ip := NewNetworkNumber(net.ParseIP(tc.ip))
 			expected := NewNetworkNumber(net.ParseIP(tc.next))
 			assert.Equal(t, expected, ip.Next())
@@ -141,6 +154,7 @@ func TestNetworkNumberNext(t *testing.T) {
 }
 
 func TestNeworkNumberPrevious(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		ip       string
 		previous string
@@ -156,6 +170,7 @@ func TestNeworkNumberPrevious(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			ip := NewNetworkNumber(net.ParseIP(tc.ip))
 			expected := NewNetworkNumber(net.ParseIP(tc.previous))
 			assert.Equal(t, expected, ip.Previous())
@@ -164,6 +179,7 @@ func TestNeworkNumberPrevious(t *testing.T) {
 }
 
 func TestLeastCommonBitPositionForNetworks(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		ip1      NetworkNumber
 		ip2      NetworkNumber
@@ -209,6 +225,7 @@ func TestLeastCommonBitPositionForNetworks(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			pos, err := tc.ip1.LeastCommonBitPosition(tc.ip2)
 			assert.Equal(t, tc.err, err)
 			assert.Equal(t, tc.position, pos)
@@ -217,6 +234,8 @@ func TestLeastCommonBitPositionForNetworks(t *testing.T) {
 }
 
 func TestNewNetwork(t *testing.T) {
+	t.Parallel()
+
 	_, ipNet, _ := net.ParseCIDR("192.128.0.0/24")
 	n := NewNetwork(*ipNet)
 
@@ -228,6 +247,7 @@ func TestNewNetwork(t *testing.T) {
 }
 
 func TestNetworkMasked(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		network       string
 		mask          int
@@ -243,15 +263,22 @@ func TestNetworkMasked(t *testing.T) {
 		{"8000:ffff::/96", 16, "8000::/16"},
 	}
 	for _, testcase := range cases {
-		_, network, _ := net.ParseCIDR(testcase.network)
-		_, expected, _ := net.ParseCIDR(testcase.maskedNetwork)
-		n1 := NewNetwork(*network)
-		e1 := NewNetwork(*expected)
-		assert.Equal(t, e1.String(), n1.Masked(testcase.mask).String())
+		t.Run("", func(t *testing.T) { // TODO fix tc names
+			t.Parallel()
+
+			_, network, _ := net.ParseCIDR(testcase.network)
+			_, expected, _ := net.ParseCIDR(testcase.maskedNetwork)
+
+			n1 := NewNetwork(*network)
+			e1 := NewNetwork(*expected)
+
+			assert.Equal(t, e1.String(), n1.Masked(testcase.mask).String())
+		})
 	}
 }
 
 func TestNetworkEqual(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		n1    string
 		n2    string
@@ -265,6 +292,7 @@ func TestNetworkEqual(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			_, ipNet1, _ := net.ParseCIDR(tc.n1)
 			_, ipNet2, _ := net.ParseCIDR(tc.n2)
 			assert.Equal(t, tc.equal, NewNetwork(*ipNet1).Equal(NewNetwork(*ipNet2)))
@@ -273,6 +301,7 @@ func TestNetworkEqual(t *testing.T) {
 }
 
 func TestNetworkContains(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		network string
 		firstIP string
@@ -284,6 +313,7 @@ func TestNetworkContains(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			_, net1, _ := net.ParseCIDR(tc.network)
 			network := NewNetwork(*net1)
 			ip := NewNetworkNumber(net.ParseIP(tc.firstIP))
@@ -298,6 +328,7 @@ func TestNetworkContains(t *testing.T) {
 }
 
 func TestNetworkContainsVersionMismatch(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		network string
 		ip      string
@@ -308,6 +339,7 @@ func TestNetworkContainsVersionMismatch(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			_, net1, _ := net.ParseCIDR(tc.network)
 			network := NewNetwork(*net1)
 			assert.False(t, network.Contains(NewNetworkNumber(net.ParseIP(tc.ip))))
@@ -316,6 +348,7 @@ func TestNetworkContainsVersionMismatch(t *testing.T) {
 }
 
 func TestNetworkCovers(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		network string
 		covers  string
@@ -333,6 +366,7 @@ func TestNetworkCovers(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			_, n, _ := net.ParseCIDR(tc.network)
 			network := NewNetwork(*n)
 			_, n, _ = net.ParseCIDR(tc.covers)
@@ -343,6 +377,7 @@ func TestNetworkCovers(t *testing.T) {
 }
 
 func TestNetworkLeastCommonBitPosition(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		cidr1       string
 		cidr2       string
@@ -360,21 +395,25 @@ func TestNetworkLeastCommonBitPosition(t *testing.T) {
 		{"ffff::0/24", "0::1/24", 0, ErrNoGreatestCommonBit, "IPv6 diverge at 1st pos"},
 	}
 	for _, c := range cases {
-		_, cidr1, err := net.ParseCIDR(c.cidr1)
-		assert.NoError(t, err)
-		_, cidr2, err := net.ParseCIDR(c.cidr2)
-		assert.NoError(t, err)
-		n1 := NewNetwork(*cidr1)
-		pos, err := n1.LeastCommonBitPosition(NewNetwork(*cidr2))
-		if c.expectedErr != nil {
-			assert.Equal(t, c.expectedErr, err)
-		} else {
-			assert.Equal(t, c.expectedPos, pos)
-		}
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			_, cidr1, err := net.ParseCIDR(c.cidr1)
+			assert.NoError(t, err)
+			_, cidr2, err := net.ParseCIDR(c.cidr2)
+			assert.NoError(t, err)
+			n1 := NewNetwork(*cidr1)
+			pos, err := n1.LeastCommonBitPosition(NewNetwork(*cidr2))
+			if c.expectedErr != nil {
+				assert.Equal(t, c.expectedErr, err)
+			} else {
+				assert.Equal(t, c.expectedPos, pos)
+			}
+		})
 	}
 }
 
 func TestMask(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		mask   NetworkNumberMask
 		ip     NetworkNumber
@@ -390,6 +429,7 @@ func TestMask(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			masked := tc.mask.Mask(tc.ip)
 			assert.Equal(t, tc.masked, masked, tc.name)
 		})
@@ -397,6 +437,7 @@ func TestMask(t *testing.T) {
 }
 
 func TestNextIP(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		ip   string
 		next string
@@ -412,12 +453,14 @@ func TestNextIP(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			assert.Equal(t, net.ParseIP(tc.next), NextIP(net.ParseIP(tc.ip)))
 		})
 	}
 }
 
 func TestPreviousIP(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		ip   string
 		next string
@@ -433,6 +476,7 @@ func TestPreviousIP(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
 			assert.Equal(t, net.ParseIP(tc.next), PreviousIP(net.ParseIP(tc.ip)))
 		})
 	}
@@ -446,6 +490,7 @@ Benchmarking ip manipulations.
 func BenchmarkNetworkNumberBitIPv4(b *testing.B) {
 	benchmarkNetworkNumberBit(b, "52.95.110.1", 6)
 }
+
 func BenchmarkNetworkNumberBitIPv6(b *testing.B) {
 	benchmarkNetworkNumberBit(b, "2600:1ffe:e000::", 44)
 }
