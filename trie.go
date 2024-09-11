@@ -5,7 +5,7 @@ import (
 	"net"
 	"strings"
 
-	rnet "github.com/libp2p/go-cidranger/net"
+	rnet "github.com/joshua-tianci/cidranger/net"
 )
 
 // prefixTrie is a path-compressed (PC) trie implementation of the

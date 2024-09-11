@@ -3,7 +3,7 @@ package cidranger
 import (
 	"net"
 
-	rnet "github.com/libp2p/go-cidranger/net"
+	rnet "github.com/joshua-tianci/cidranger/net"
 )
 
 // bruteRanger is a brute force implementation of Ranger.  Insertion and

@@ -9,9 +9,9 @@ import (
 	"time"
 
 	detectrace "github.com/ipfs/go-detect-race"
-
-	rnet "github.com/libp2p/go-cidranger/net"
 	"github.com/stretchr/testify/assert"
+
+	rnet "github.com/joshua-tianci/cidranger/net"
 )
 
 func getAllByVersion(version rnet.IPVersion) *net.IPNet {
