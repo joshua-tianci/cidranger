@@ -66,18 +66,18 @@ type RangerEntry interface {
 }
 
 type basicRangerEntry struct {
-	ipNet net.IPNet
+	net.IPNet
 }
 
 func (b *basicRangerEntry) Network() net.IPNet {
-	return b.ipNet
+	return b.IPNet
 }
 
 // NewBasicRangerEntry returns a basic RangerEntry that only stores the network
 // itself.
 func NewBasicRangerEntry(ipNet net.IPNet) RangerEntry {
 	return &basicRangerEntry{
-		ipNet: ipNet,
+		IPNet: ipNet,
 	}
 }
 
@@ -92,7 +92,7 @@ type Ranger interface {
 }
 
 // NewPCTrieRanger returns a versionedRanger that supports both IPv4 and IPv6
-// using the path compressed trie implemention.
+// using the path compressed trie implementation.
 func NewPCTrieRanger() Ranger {
 	return newVersionedRanger(newRanger)
 }
